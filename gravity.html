@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gravidy Game</title>
+</head>
+
+<body>
+    <h1>Gravity Game</h1>
+    <canvas id="myCanvas" width="1280" height="720"></canvas>
+    <img id="satImage" style="display:none;" src="Body.png"></img>
+    <p id="score">Score: 0</p>
+    <audio id="win"><source src="win.wav"></source></audio>
+
+<script>
+var gameState;
+var canvas;
+var ctx;
+
+// See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
+var getRandomInt = function(min, max)
+{
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+var reinitPlanets = function()
+{
+    gameState.planet1 =
+    {
+        x: getRandomInt(100, 1280),
+        y: getRandomInt(0, 720),
+        g: 10,
+        image: document.getElementById("satImage")
+    };
+    gameState.planet2 =
+    {
+        x: getRandomInt(100, 1280),
+        y: getRandomInt(0, 720),
+        g: 10,
+        image: document.getElementById("satImage")
+    };
+}
+
+var reinitSat = function()
+{
+    gameState.sat =
+    {
+        x: 0,
+        y: 360,
+        vx: 0,
+        vy: 0,
+        image: document.getElementById("satImage")
+    };
+}
+
+var onMouseReleased = function(event)
+{
+    if (gameState.state == 0)
+    {
+        let rect = canvas.getBoundingClientRect();
+        let mouseX = event.clientX - rect.left;
+        let mouseY = event.clientY - rect.top;
+
+        if (mouseX > 100)
+        {
+            vx = mouseX / 100;
+            vy = (mouseY - 360) / 100;
+            gameState.sat.vy = vy;
+            gameState.sat.vx = vx;
+            gameState.startDate = Date.now();
+            gameState.state = 1;
+        }
+    }
+}
+
+var drawGame = function()
+{
+    var width = canvas.width;
+    var height = canvas.height;
+    var sat = gameState.sat;
+
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.drawImage(sat.image, sat.x, sat.y);
+    ctx.drawImage(gameState.planet1.image, gameState.planet1.x,
+            gameState.planet1.y);
+    ctx.drawImage(gameState.planet2.image, gameState.planet2.x,
+            gameState.planet2.y);
+}
+
+var satColiding = function()
+{
+    return false;
+}
+
+var animateGame = function()
+{
+    window.requestAnimationFrame(animateGame);
+    var sat = gameState.sat;
+    if (gameState.state == 1)
+    {
+        const p1x = gameState.planet1.x
+        const p1y = gameState.planet1.y;
+        const p2x = gameState.planet2.x;
+        const p2y = gameState.planet2.y;
+
+        const denom1 = Math.pow(Math.pow(sat.x - p1x, 2) + Math.pow(sat.y - p1y,
+                    2), 1.5);
+        const denom2 = Math.pow(Math.pow(sat.x - p2x, 2) + Math.pow(sat.y - p2y,
+                    2), 1.5);
+        sat.vx += (gameState.planet1.g * (p1x - sat.x) / denom1 +
+            gameState.planet2.g * (p2x - sat.x) / denom2) * 100;
+        sat.vy += (gameState.planet1.g * (p1y - sat.y) / denom1 +
+            gameState.planet2.g * (p2y - sat.y) / denom2) * 100;
+        //console.log(sat.vy);
+        //console.log(sat.vx);
+        sat.x += sat.vx;
+        sat.y += sat.vy;
+
+        if (sat.x < 0 || sat.x > canvas.width || sat.y < 0 || sat.y >
+                canvas.height || satColiding())
+        {
+            gameState.failures += 1;
+            reinitSat();
+            reinitPlanets();
+            let score = "Score: " + ((Date.now() - gameState.startDate) / 1000);
+            document.getElementById("score").textContent = score;
+            if (score > 10)
+            {
+                document.getElementById("win").play();
+            }
+            gameState.state = 0;
+        }
+    }
+//    console.log(gameState.failures);
+    drawGame();
+}
+
+
+window.onload = function()
+{
+    canvas = document.getElementById("myCanvas");
+    ctx = canvas.getContext("2d");
+    gameState = {};
+
+    reinitSat();    
+    reinitPlanets();
+    
+    gameState.state = 0;
+    gameState.failures = 0;
+
+    canvas.addEventListener("mouseup", onMouseReleased);
+
+    animateGame();
+}
+</script>
+</body>
+</html>
